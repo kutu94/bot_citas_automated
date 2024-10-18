@@ -5,20 +5,40 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import Select
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from proxy_manager import get_random_proxy, configure_proxy_for_selenium
 import time
 
-def start_browser():
-    # Configuración del navegador
+
+def start_browser_with_proxy():
+    proxy = get_random_proxy()  # Obtener un proxy aleatorio
+    
+    print(f"Usando el proxy {proxy['ip']}:{proxy['port']}")
+
+    # Configuración del navegador con proxy
     options = Options()
     options.add_argument('--start-maximized')
     options.add_argument('--incognito')
 
-    # Ruta al ChromeDriver
-    service = Service('G:\Estudio\Python 3\Bot-Citas\chromedriver.exe')  # Cambia esta ruta según tu sistema
+    proxy_config = Proxy()
+    proxy_config.proxy_type = ProxyType.MANUAL
+    proxy_config.http_proxy = f"{proxy['ip']}:{proxy['port']}"
+    proxy_config.ssl_proxy = f"{proxy['ip']}:{proxy['port']}"
 
-    # Inicializar el navegador
-    driver = webdriver.Chrome(service=service, options=options)
-    return driver
+    capabilities = webdriver.DesiredCapabilities.CHROME.copy()
+    proxy_config.add_to_capabilities(capabilities)
+
+    service = Service('G:\\Estudio\\Python 3\\Bot-Citas\\chromedriver.exe')  # Asegúrate de que esta ruta sea correcta
+    driver = webdriver.Chrome(service=service, options=options, desired_capabilities=capabilities)
+
+    # Verifica si el proxy funciona cargando una página sencilla
+    try:
+        driver.get("https://checkip.amazonaws.com")
+        print(f"IP vista desde el servidor: {driver.page_source.strip()}")
+        return driver
+    except Exception as e:
+        print(f"Error al cargar la página con el proxy {proxy['ip']}:{proxy['port']}: {e}")
+        driver.quit()
+        return None
 
 def open_website(driver, url):
     driver.get(url)
@@ -184,7 +204,7 @@ persona_info = {
 }
 
 if __name__ == "__main__":
-    driver = start_browser()
+    driver = start_browser_with_proxy()
 
     # Navegar al sitio
     open_website(driver, "https://icp.administracionelectronica.gob.es/icpplus/index.html")
